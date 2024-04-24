@@ -10,7 +10,7 @@ const glucSchema = new mongoose.Schema(
         gluc : {type: Number , required : true} , 
         metadata: {
             userId: {type: mongoose.Schema.Types.ObjectId , ref: 'User' , required: true},
-            note:  {type: String , enum: ['before meal','after meal','after medication','after working','before medication','fasting'], required: true},
+            note:  {type: String , enum: ['before meal','after meal','after medication','after working','before medication','fasting','auto'], required: true},
             type: {type: String , enum: ['manual','device'] , required: true},
             unit: {type: String , enum: ['mg/dL','mmol/L'] }
         },

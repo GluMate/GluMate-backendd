@@ -12,13 +12,15 @@ import providerRoutes from './routes/provider.js'
 import glucRoutes from './routes/glucose.js' ;
 import admin from 'firebase-admin'
 import User from "./models/user.js";
+
+import Glucose from "./models/glucose.js"
 mongoose.set('debug',true);
 
 mongoose.Promise = global.Promise;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const hostname = '127.0.0.1' || process.env.HOST
+const hostname = '0.0.0.0' || process.env.HOST
 const app =express();
 const port = process.env.port || 9090
 const databaseName = 'GluMate';
@@ -76,6 +78,53 @@ app.get('/',(req,res) => {
 
 
 connectToDatabase() ;
+const userId = "660c30c4145142dfd625f9a9"; // User ID for type 1 diabetes
+
+const startDate = new Date("2024-01-15T00:00:00"); // Start date for measurements
+const endDate = new Date("2024-04-15T00:00:00"); // End date for measurements
+
+const frequency = 5; // Measurement frequency in minutes
+const measurementsPerDay = 100; // Number of measurements per day
+
+const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+
+const generateRandomGlucose = () => {
+  // Generate logical glucose values for type 1 diabetes
+  // You can adjust the range based on your requirements
+  const minGlucose = 60;
+  const maxGlucose = 300;
+  return Math.floor(Math.random() * (maxGlucose - minGlucose + 1)) + minGlucose;
+};
+
+const addMeasurements = async () => {
+  for (let day = 0; day < totalDays; day++) {
+    const currentDate = new Date(startDate);
+    currentDate.setDate(startDate.getDate() + day);
+    for (let minute = 0; minute < 24 * 60; minute += frequency) {
+      const measuredAt = new Date(currentDate);
+      measuredAt.setMinutes(measuredAt.getMinutes() + minute);
+      const glucoseValue = generateRandomGlucose();
+      const glucoseMeasurement = new Glucose({
+        measured_at: measuredAt,
+        gluc: glucoseValue,
+        metadata: {
+          userId: userId,
+          note: "fasting", // You can change note based on your requirement
+          type: "device", // Assuming measurements are from a device
+          unit: "mg/dL", // Unit for glucose measurements
+        },
+      });
+      try {
+        await glucoseMeasurement.save();
+      } catch (error) {
+        console.error("Error saving glucose measurement:", error);
+      }
+    }
+  }
+  console.log("Glucose measurements added successfully!");
+};
+
+//addMeasurements();
   process.on('SIGINT', () => {
     console.log('Received SIGINT. Shutting down gracefully.');
     app.close(() => {

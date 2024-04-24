@@ -4,6 +4,10 @@ import User from "../models/user.js";
 import admin from "firebase-admin"
 import {validationResult} from "express-validator"
 import uploadProfilePic from "../middlewears/multer-profilePic.js";
+import otpGenerator from 'otp-generator';
+import Otp from '../models/otp.js';
+import { OtpEmailOptions } from "../utils/OtpEmail-template.js";
+import nodemailer from "nodemailer";
 
 export async function PatientRegister(req, res, next) {
     try {
@@ -156,4 +160,60 @@ export  async function ProfilePicUpload (req,res,next){
           };
       }
 
+
+
+export async function sendOTP(req,res,next){
+        try {
+          const existingUser = await User.findOne(
+            { email: req.body.email },
+          );
+      
+          if (!existingUser) {
+            return res.status(400).json({ message: "It seems that you don't have an account, please register instead." });
+          }
+         await Otp.deleteMany({
+            userId : existingUser.UID
+      })
+          const otp = otpGenerator.generate(6,{
+            secret: "TRIAL DEMO",
+            digits: 6,
+            algorithm: 'sha256',
+            epoch: Date.now(),
+            upperCaseAlphabets: false, specialChars: false,
+            lowerCaseAlphabets: false,
+        });
+              const otpDocument = new Otp({
+                  userId: existingUser.UID, 
+                  otp
+              });
+              await otpDocument.save();
+              sendOTPEmail(existingUser,otp)
+              res.status(200).json({ message: "OTP Sent"});
+      
+      } catch (error) {
+          console.error('Error generating OTP:', error);
+          res.status(500).json({ error: 'Internal Server Error' });
+      }
+      }
+
+      async function sendOTPEmail(user,otp) {
+        let transporter = nodemailer.createTransport({
+          host: "smtp-relay.brevo.com",
+          port: 587,
+          secure: false, // true pour TLS
+          auth: {
+            user: "azizjaziri87@gmail.com",
+            pass: "rGU1MHnABKz5pCQ0",
+          },
+        });
+        const sender = "azizjaziri87@gmail.com"
+      
+        //definir l'email options 
+       const mailOptions = OtpEmailOptions(sender,user,otp);
+       
+        // Envoyer l'e-mail
+        let info = await transporter.sendMail(mailOptions);
+      
+        console.log("Message sent: %s", info.messageId);
+      }
 
